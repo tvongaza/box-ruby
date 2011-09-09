@@ -33,7 +33,7 @@ module Box
     # @param [String] upload_url the url of the upload host for the Box api.
     # @param [String] version the version of the Box api in use.
     #
-    def initialize(key, url = 'https://box.net', upload_url = 'https://upload.box.net', version = '1.0')
+    def initialize(key, url = 'https://www.box.net', upload_url = 'https://upload.box.net', version = '1.0')
       @default_params = { :api_key => key } # add the api_key to every query
 
       @base_url = "#{ url }/api/#{ version }" # set the base of the request url
@@ -96,14 +96,26 @@ module Box
     # @return (see #query_rest)
     #
     def query_raw(method, url, expected, options = {})
-      response = case method
-      when 'get'
-        self.class.get(url, :query => @default_params.merge(options))
-      when 'post'
-        self.class.post(url, :query => @default_params.merge(options), :format => :xml) # known bug with api that only occurs with uploads, will be fixed soon
-      end
+      tried = 3
+      begin
+        response = case method
+        when 'get'
+          self.class.get(url, :query => @default_params.merge(options))
+        when 'post'
+          self.class.post(url, :query => @default_params.merge(options), :format => :xml) # known bug with api that only occurs with uploads, will be fixed soon
+        end
 
-      handle_response(response, expected)
+        handle_response(response, expected)
+      rescue Errno::ECONNRESET => e
+        if e.message.include?("SSL_connect")
+          tries -= 1
+          if tries > 0
+            retry
+          else
+            raise e
+          end
+        end
+      end
     end
 
     # Handle the response of the request.
