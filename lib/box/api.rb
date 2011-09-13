@@ -96,7 +96,7 @@ module Box
     # @return (see #query_rest)
     #
     def query_raw(method, url, expected, options = {})
-      tried = 3
+      tries = 3
       begin
         response = case method
         when 'get'
